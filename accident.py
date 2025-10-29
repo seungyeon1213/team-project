@@ -1,3 +1,4 @@
+pip install streamlit folium streamlit-folium
 # 파일명: crowd_safety_simulator.py
 import streamlit as st
 import folium

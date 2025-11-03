@@ -195,7 +195,7 @@ if st.session_state.report_on:
     sel_city = st.session_state.selected_city
     info = safety_data[sel_country]
 
-    st.header(f"📋 {sel_country} – {sel_city} {_['title'].split()[0]}")
+    st.header(f"📋 {sel_country} – {sel_city}")
 
     # 긴급 전화 링크
     phone = info["현지 연락처"]["긴급 전화"].split(" / ")[0]
@@ -258,7 +258,7 @@ if st.session_state.report_on:
         "욕야카르타": (-7.7956, 110.3695),
     }
     lat, lon = coords.get(sel_city, (0, 0))
-    st.subheader("📍 " + (_["city_select"]))
+    st.subheader(_["city_select"])
     st.map(pd.DataFrame({"lat":[lat],"lon":[lon]}))
 
     st.markdown("---")
@@ -284,7 +284,7 @@ if st.session_state.report_on:
     done = sum(checklist.values())
     total = len(checklist)
     if done < total:
-        st.warning(f"⚠️ {done}/{total} {_['checklist_section']}")
+        st.warning(f"⚠️ {done}/{total} {_["checklist_section"]}")
     else:
         st.success(_["complete_success"])
 
@@ -293,23 +293,25 @@ if st.session_state.report_on:
     # --- 응급 상황 대처 추가 섹션 ---
     st.subheader(_["emergency_section"])
     emergency_types = {
-        "earthquake": _("emergency_select") + ": 지진 (Earthquake)",
-        "crime": _("emergency_select") + ": 범죄 (Crime)",
-        "medical": _("emergency_select") + ": 의료 긴급 (Medical Emergency)"
+        "earthquake": "Earthquake / 지진",
+        "crime": "Crime / 범죄",
+        "medical": "Medical Emergency / 의료 긴급"
     }
-    sel_em = st.selectbox(_["emergency_select"], list(emergency_types.values()), key="sel_emergency")
+    sel_em_key = st.selectbox(_["emergency_select"], list(emergency_types.values()), key="sel_emergency")
     advice_map = {
         "earthquake": "지진 발생 시 구조된 지진대피소로 즉시 이동하세요. / In case of earthquake, move to a designated safe shelter immediately.",
         "crime": "주변에 인적이 드물거나 불안한 곳이라면 즉시 밝은 조명과 사람이 많은 공간으로 이동하세요. / If you are in an area with high crime risk, move to a well‑lit, populated area immediately.",
         "medical": "긴급 병원이나 응급실로 이동하고, 대사관/영사관 연락처도 확인하세요. / Move to the nearest emergency hospital and contact your embassy/consulate."
     }
-    for key, val in emergency_types.items():
-        if val == st.session_state.sel_emergency:
+    # key 매핑
+    for key in advice_map.keys():
+        if emergency_types[key] == sel_em_key:
             st.info(_["emergency_advice_prefix"] + advice_map[key])
 
 # --- 여행 기록 테이블 ---
 st.subheader(_["record_section"])
+record_label = _["record_section"]
 if st.session_state.travel_history:
     st.dataframe(pd.DataFrame(st.session_state.travel_history))
 else:
-    st.info(_("record_section") + "가/이 없습니다.")
+    st.info(f"{record_label}가/이 없습니다.")

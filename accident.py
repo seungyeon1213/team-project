@@ -4,10 +4,65 @@ import pandas as pd
 import datetime
 import pydeck as pdk
 
-st.set_page_config(page_title="SafeTrip v10 Full", page_icon="✈️", layout="wide")
+# --- 다국어 문자열 사전 ---
+translations = {
+    "ko": {
+        "title": "✈️ SafeTrip Full 버전 (v10)",
+        "caption": "여행 일정표 · 지도 · 최신 이슈 · 긴급전화 링크 · 확대 국가/도시 정보 포함",
+        "lang_select": "언어 선택",
+        "travel_schedule": "📆 여행 일정 입력",
+        "departure": "출국일",
+        "return": "귀국일",
+        "duration_prefix": "➡️ 여행 기간: ",
+        "days_suffix": "일",
+        "country_select": "🌍 국가 선택",
+        "city_select": "🏙️ 도시 선택",
+        "search_report": "🔍 안전 보고서 보기",
+        "emergency_section": "🚨 응급 상황 대처",
+        "emergency_select": "상황 선택",
+        "emergency_advice_prefix": "🔹 대처 요령: ",
+        "call_emergency": "📞 긴급전화 걸기",
+        "risk_info": "⚠️ 주요 위험 및 유의사항",
+        "tips_info": "✅ 대처 요령",
+        "recent_issues": "📰 최근 위험 이슈",
+        "checklist_section": "🧳 여행 전 필수 점검",
+        "record_section": "📜 나의 여행 기록",
+        "complete_success": "🎉 모든 준비 완료! 안전한 여행 되세요.",
+    },
+    "en": {
+        "title": "✈️ SafeTrip Full Version (v10)",
+        "caption": "Travel schedule · Map · Latest issues · Emergency call link · Expanded countries/cities info",
+        "lang_select": "Select Language",
+        "travel_schedule": "📆 Enter Travel Schedule",
+        "departure": "Departure Date",
+        "return": "Return Date",
+        "duration_prefix": "➡️ Trip Duration: ",
+        "days_suffix": " days",
+        "country_select": "🌍 Select Country",
+        "city_select": "🏙️ Select City",
+        "search_report": "🔍 View Safety Report",
+        "emergency_section": "🚨 Emergency Response",
+        "emergency_select": "Select Situation",
+        "emergency_advice_prefix": "🔹 Advice: ",
+        "call_emergency": "📞 Make Emergency Call",
+        "risk_info": "⚠️ Key Risks & Notices",
+        "tips_info": "✅ Response Tips",
+        "recent_issues": "📰 Recent Issues",
+        "checklist_section": "🧳 Pre‑Travel Checklist",
+        "record_section": "📜 My Travel Records",
+        "complete_success": "🎉 All set! Have a safe trip.",
+    }
+}
 
-st.title("✈️ SafeTrip Full 버전 (v10)")
-st.caption("여행 일정표 · 지도 · 최신 이슈 · 긴급전화 링크 · 확대 국가/도시 정보 포함")
+# 언어 선택
+lang_option = st.selectbox(translations["ko"]["lang_select"], ("한국어", "English"), key="lang_choice")
+lang = "ko" if lang_option == "한국어" else "en"
+_ = translations[lang]
+
+st.set_page_config(page_title=_["title"], page_icon="✈️", layout="wide")
+
+st.title(_["title"])
+st.caption(_["caption"])
 
 st.markdown("---")
 
@@ -23,7 +78,7 @@ safety_data = {
     "일본": {
         "도시": ["도쿄", "오사카", "후쿠오카", "삿포로", "교토", "요코하마", "나고야"],
         "위험 정보": ["지진 가능성", "유흥가 호객행위 주의"],
-        "대처 요령": ["지진 발생 시 DROP, COVER, HOLD ON"],
+        "대처 요령": ["지진 발생 시 DROP, COVER, HOLD ON"],
         "현지 연락처": {"긴급 전화": "110 / 119"},
         "추가 이슈": ["외국인 대상 유흥가 사기 사례 증가"]
     },
@@ -79,28 +134,27 @@ safety_data = {
 }
 
 # --- 고정 환율 데이터 (원화 기준 환산 예시) ---
-# 참고: 실제 환율은 변동하므로 여행시 최신 환율 확인하세요
 exchange_rates = {
     "한국": ("KRW", 1, "1원 = 1원"),
     "일본": ("JPY", 0.106, "1원 ≈ 0.106엔"),
     "태국": ("THB", 0.0228, "1원 ≈ 0.0228바트"),
     "캄보디아": ("KHR", 2.83, "1원 ≈ 2.83리엘"),
-    "미국": ("USD", 1/1420, "1원 ≈ 0.00070달러"),    # 1 USD ≈ 1,420원 → 1원 ≈ 약 0.00070 USD   [oai_citation_attribution:0‡Investing.com](https://www.investing.com/currencies/usd-krw?utm_source=chatgpt.com)
-    "영국": ("GBP", 1/1800, "1원 ≈ 0.00056파운드"),    # 추정값
-    "호주": ("AUD", 1/930, "1원 ≈ 0.00108달러(AUD)"),  # 1 AUD ≈ 930원  [oai_citation_attribution:1‡xe.com](https://www.xe.com/currencyconverter/convert/?Amount=1&From=AUD&To=KRW&utm_source=chatgpt.com)
-    "베트남": ("VND", 18.86, "1원 ≈ 18.86동"),        # 1원 ≈ 18.86 VND  [oai_citation_attribution:2‡환율 교환소](https://www.exchange-rates.org/exchange-rate-history/vnd-krw?utm_source=chatgpt.com)
-    "인도네시아": ("IDR", 11.56, "1원 ≈ 11.56루피아"), # 1 KRW ≈ 11.56 IDR  [oai_citation_attribution:3‡xe.com](https://www.xe.com/currencyconverter/convert/?Amount=1&From=IDR&To=KRW&utm_source=chatgpt.com)
+    "미국": ("USD", 1/1420, "1원 ≈ 0.00070달러"),
+    "영국": ("GBP", 1/1800, "1원 ≈ 0.00056파운드"),
+    "호주": ("AUD", 1/930, "1원 ≈ 0.00108호주달러"),
+    "베트남": ("VND", 18.86, "1원 ≈ 18.86동"),
+    "인도네시아": ("IDR", 11.56, "1원 ≈ 11.56루피아"),
 }
 
 # --- 여행 일정표 입력 기능 ---
-st.subheader("📆 여행 일정 입력")
-departure = st.date_input("출국일", datetime.date.today())
-return_date = st.date_input("귀국일", datetime.date.today() + datetime.timedelta(days=7))
+st.subheader(_["travel_schedule"])
+departure = st.date_input(_["departure"], datetime.date.today())
+return_date = st.date_input(_["return"], datetime.date.today() + datetime.timedelta(days=7))
 if return_date < departure:
-    st.error("⚠️ 귀국일이 출국일보다 앞설 수 없습니다.")
+    st.error("⚠️ " + _["return"] + "이/가 " + _["departure"] + "보다 앞설 수 없습니다.")
 else:
     duration = (return_date - departure).days
-    st.write(f"➡️ 여행 기간: **{duration}일**")
+    st.write(_["duration_prefix"] + f"{duration}" + _["days_suffix"])
 
 st.markdown("---")
 
@@ -115,11 +169,11 @@ if "report_on" not in st.session_state:
 # --- 국가/도시 선택 ---
 col_country, col_city = st.columns(2)
 with col_country:
-    country = st.selectbox("🌍 국가 선택", list(safety_data.keys()))
+    country = st.selectbox(_["country_select"], list(safety_data.keys()))
 with col_city:
-    city = st.selectbox("🏙️ 도시 선택", safety_data[country]["도시"])
+    city = st.selectbox(_["city_select"], safety_data[country]["도시"])
 
-if st.button("🔍 안전 보고서 보기", type="primary"):
+if st.button(_["search_report"], type="primary"):
     st.session_state.travel_history.append({
         "국가": country,
         "도시": city,
@@ -141,11 +195,11 @@ if st.session_state.report_on:
     sel_city = st.session_state.selected_city
     info = safety_data[sel_country]
 
-    st.header(f"📋 {sel_country} – {sel_city} 안전 보고서")
+    st.header(f"📋 {sel_country} – {sel_city} {_['title'].split()[0]}")
 
     # 긴급 전화 링크
     phone = info["현지 연락처"]["긴급 전화"].split(" / ")[0]
-    st.markdown(f"[📞 긴급전화 걸기](tel:{phone})")
+    st.markdown(f"[{_['call_emergency']}](tel:{phone})")
 
     # 환율 표시
     if sel_country in exchange_rates:
@@ -204,41 +258,58 @@ if st.session_state.report_on:
         "욕야카르타": (-7.7956, 110.3695),
     }
     lat, lon = coords.get(sel_city, (0, 0))
-    st.subheader("📍 여행지 지도 조회")
-    st.map(pd.DataFrame({"lat":[lat], "lon":[lon]}))
+    st.subheader("📍 " + (_["city_select"]))
+    st.map(pd.DataFrame({"lat":[lat],"lon":[lon]}))
 
     st.markdown("---")
 
-    st.subheader("⚠️ 주요 위험 및 유의사항")
+    st.subheader(_["risk_info"])
     for r in info["위험 정보"]:
         st.warning(r)
 
-    st.subheader("✅ 대처 요령")
+    st.subheader(_["tips_info"])
     for t in info["대처 요령"]:
         st.success(t)
 
-    st.subheader("📰 최근 위험 이슈")
+    st.subheader(_["recent_issues"])
     for issue in info.get("추가 이슈", []):
         st.info(issue)
 
     st.markdown("---")
 
-    st.subheader("🧳 여행 전 필수 점검")
+    st.subheader(_["checklist_section"])
     checklist = st.session_state.checklist[sel_country]
     for item in checklist.keys():
         checklist[item] = st.checkbox(item, checklist[item], key=f"{sel_country}_{item}")
     done = sum(checklist.values())
     total = len(checklist)
     if done < total:
-        st.warning(f"⚠️ {done}/{total} 항목 완료 — 출국 전 추가 점검 필요")
+        st.warning(f"⚠️ {done}/{total} {_['checklist_section']}")
     else:
-        st.success("🎉 모든 준비 완료! 안전한 여행 되세요.")
+        st.success(_["complete_success"])
 
     st.markdown("---")
 
+    # --- 응급 상황 대처 추가 섹션 ---
+    st.subheader(_["emergency_section"])
+    emergency_types = {
+        "earthquake": _("emergency_select") + ": 지진 (Earthquake)",
+        "crime": _("emergency_select") + ": 범죄 (Crime)",
+        "medical": _("emergency_select") + ": 의료 긴급 (Medical Emergency)"
+    }
+    sel_em = st.selectbox(_["emergency_select"], list(emergency_types.values()), key="sel_emergency")
+    advice_map = {
+        "earthquake": "지진 발생 시 구조된 지진대피소로 즉시 이동하세요. / In case of earthquake, move to a designated safe shelter immediately.",
+        "crime": "주변에 인적이 드물거나 불안한 곳이라면 즉시 밝은 조명과 사람이 많은 공간으로 이동하세요. / If you are in an area with high crime risk, move to a well‑lit, populated area immediately.",
+        "medical": "긴급 병원이나 응급실로 이동하고, 대사관/영사관 연락처도 확인하세요. / Move to the nearest emergency hospital and contact your embassy/consulate."
+    }
+    for key, val in emergency_types.items():
+        if val == st.session_state.sel_emergency:
+            st.info(_["emergency_advice_prefix"] + advice_map[key])
+
 # --- 여행 기록 테이블 ---
-st.subheader("📜 나의 여행 기록")
+st.subheader(_["record_section"])
 if st.session_state.travel_history:
     st.dataframe(pd.DataFrame(st.session_state.travel_history))
 else:
-    st.info("아직 여행 기록이 없습니다.")
+    st.info(_("record_section") + "가/이 없습니다.")

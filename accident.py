@@ -1,75 +1,152 @@
-# 파일명: real_crowd_safety.py
+# 파일명: safetrip_app_v9_pro.py
 import streamlit as st
-import folium
-from streamlit_folium import st_folium
+import pandas as pd
 import random
+import datetime
+import requests
+import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="압사 예방 실전", layout="wide")
-st.title("🚨 압사 예방 실전 시뮬레이터")
+st.set_page_config(
+    page_title="SafeTrip Pro (V9)",
+    page_icon="✈️",
+    layout="wide"
+)
 
-# ----------------------------
-# 1. 사용자 위치 입력 (실전 환경에서는 GPS 자동 연동)
-# ----------------------------
-st.header("1️⃣ 현재 위치")
-user_lat = st.number_input("위도", value=37.5665, format="%.6f")
-user_lon = st.number_input("경도", value=126.9780, format="%.6f")
-st.write(f"📍 현재 위치: ({user_lat}, {user_lon})")
+st.title("✈️ SafeTrip Pro: 여행 안전 보고서 (v9 확장판)")
+st.caption("🌐 외교부 여행경보 + 환율 + 안전지수 + 여행이력 기능 통합")
 
-# ----------------------------
-# 2. 주변 군중 밀집도 시뮬레이션 (실전: API 연동)
-# ----------------------------
-st.header("2️⃣ 주변 군중 밀집도 확인")
-zones = [{"name": f"구역{i+1}", 
-          "lat": user_lat + random.uniform(-0.002,0.002),
-          "lon": user_lon + random.uniform(-0.002,0.002),
-          "crowd": random.randint(20,100)} for i in range(5)]
+st.markdown("---")
 
-RISK_THRESHOLD = 70  # 위험 임계치
+# --- 1. 기본 데이터 (기존 유지) ---
+safety_data = {
+    "한국": {"도시": ["서울", "부산"], "위험 정보": ["대체로 안전"], "대처 요령": ["일반 안전 수칙 준수"], "현지 연락처": {"긴급 전화": "112"}, "추천": {"명소": ["경복궁"], "맛집": ["명동교자"], "핫플": ["홍대"]}},
+    "일본": {"도시": ["도쿄", "오사카"], "위험 정보": ["지진 가능성"], "대처 요령": ["지진 시 대피 요령 숙지"], "현지 연락처": {"긴급 전화": "110"}, "추천": {"명소": ["후지산"], "맛집": ["라멘"], "핫플": ["시부야"]}},
+    "태국": {"도시": ["방콕", "푸켓"], "위험 정보": ["소매치기 주의"], "대처 요령": ["대중교통 이용"], "현지 연락처": {"긴급 전화": "191"}, "추천": {"명소": ["왕궁"], "맛집": ["팟타이"], "핫플": ["카오산로드"]}},
+    "프랑스": {"도시": ["파리", "니스"], "위험 정보": ["시위 및 소매치기 주의"], "대처 요령": ["가방은 앞으로 메기"], "현지 연락처": {"긴급 전화": "17"}, "추천": {"명소": ["에펠탑"], "맛집": ["크루아상"], "핫플": ["마레 지구"]}},
+}
 
-# ----------------------------
-# 3. 지도 표시
-# ----------------------------
-m = folium.Map(location=[user_lat, user_lon], zoom_start=17)
-# 사용자 위치 표시
-folium.Marker([user_lat, user_lon], popup="내 위치", icon=folium.Icon(color="blue")).add_to(m)
-# 구역 표시
-for z in zones:
-    color = "red" if z["crowd"] >= RISK_THRESHOLD else "green"
-    folium.CircleMarker([z["lat"], z["lon"]],
-                        radius=15,
-                        color=color,
-                        fill=True,
-                        fill_opacity=0.6,
-                        popup=f"{z['name']} - 밀집도: {z['crowd']}").add_to(m)
+check_list = [
+    "여권/비자 확인", "여행자 보험 가입", "긴급 연락처 저장",
+    "신용카드 분실 신고처 메모", "날씨 및 복장 확인", "상비약 준비"
+]
 
-st_folium(m, width=700, height=500)
+# --- 2. 세션 상태 관리 ---
+if "selected_country" not in st.session_state:
+    st.session_state.selected_country = "한국"
+if "selected_city" not in st.session_state:
+    st.session_state.selected_city = "서울"
+if "checklist_status" not in st.session_state:
+    st.session_state.checklist_status = {}
+if "travel_history" not in st.session_state:
+    st.session_state.travel_history = []
+if "report_searched" not in st.session_state:
+    st.session_state.report_searched = False
 
-# ----------------------------
-# 4. 즉시 위험 알림
-# ----------------------------
-st.header("3️⃣ 위험 알림")
-high_risk_zones = [z for z in zones if z["crowd"] >= RISK_THRESHOLD]
+# --- 3. 외교부 여행경보 단계 (샘플 데이터) ---
+alert_level = {
+    "한국": "1단계 (일반)",
+    "일본": "1단계 (일반)",
+    "태국": "2단계 (여행 유의)",
+    "프랑스": "2단계 (여행 유의)"
+}
 
-if high_risk_zones:
-    st.markdown("""
-    <script>
-    // 소리 재생
-    new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg").play();
-    // 진동
-    if (navigator.vibrate) { navigator.vibrate([500,200,500]); }
-    </script>
-    """, unsafe_allow_html=True)
+# --- 4. 국가별 환율 정보 (무료 API 샘플 - exchangerate.host 사용) ---
+def get_exchange_rate(target_currency):
+    try:
+        url = f"https://api.exchangerate.host/convert?from=KRW&to={target_currency}"
+        res = requests.get(url).json()
+        return res.get("result", None)
+    except:
+        return None
+
+currency_codes = {"한국": "KRW", "일본": "JPY", "태국": "THB", "프랑스": "EUR"}
+
+# --- 5. 안전지수 (가상 수치 예시) ---
+safety_index = {
+    "한국": 95,
+    "일본": 92,
+    "태국": 78,
+    "프랑스": 81
+}
+
+# --- 6. 국가/도시 선택 ---
+col1, col2 = st.columns(2)
+with col1:
+    selected_country = st.selectbox("🌍 국가 선택", list(safety_data.keys()))
+with col2:
+    selected_city = st.selectbox("🏙️ 도시 선택", safety_data[selected_country]["도시"])
+
+if st.button("🔍 안전 보고서 보기", type="primary"):
+    st.session_state.selected_country = selected_country
+    st.session_state.selected_city = selected_city
+    st.session_state.report_searched = True
+    # 여행 이력에 추가
+    record = {"국가": selected_country, "도시": selected_city, "날짜": datetime.date.today()}
+    st.session_state.travel_history.append(record)
+    # 체크리스트 초기화
+    if selected_country not in st.session_state.checklist_status:
+        st.session_state.checklist_status[selected_country] = {item: False for item in check_list}
+    st.rerun()
+
+# --- 7. 안전 보고서 표시 ---
+if st.session_state.report_searched:
+    country = st.session_state.selected_country
+    city = st.session_state.selected_city
+    info = safety_data[country]
     
-    st.warning("⚠️ 주변 구역 혼잡! 접근 금지!")
-    for z in high_risk_zones:
-        st.write(f"- {z['name']} 밀집도: {z['crowd']}")
-else:
-    st.success("✅ 주변 안전")
+    st.header(f"📋 {city}, {country} 안전 보고서")
+    st.info(f"🌐 외교부 여행경보: **{alert_level.get(country, '정보 없음')}**")
 
-# ----------------------------
-# 5. 한 번 누르기 신고
-# ----------------------------
-st.header("4️⃣ 위험 신고")
-if st.button("🚨 위험 신고"):
-    # 실제 구현 시 서버/DB로 위치+위험 정보 전송 가능
-    st.error("신고 완료! 위치와 위험 정보가 전송되었습니다.")
+    # 환율 표시
+    if country in currency_codes and country != "한국":
+        rate = get_exchange_rate(currency_codes[country])
+        if rate:
+            st.metric(f"💱 1,000 KRW = {rate*1000:.2f} {currency_codes[country]}")
+        else:
+            st.warning("환율 정보를 불러올 수 없습니다.")
+    
+    st.markdown("---")
+    tab1, tab2, tab3, tab4 = st.tabs(["⚠️ 위험 정보", "✅ 대처 요령", "📝 점검 리스트", "📊 국가별 안전지수"])
+
+    with tab1:
+        st.subheader("⚠️ 위험 정보")
+        for r in info["위험 정보"]:
+            st.warning(r)
+
+    with tab2:
+        st.subheader("✅ 대처 요령")
+        for t in info["대처 요령"]:
+            st.success(t)
+
+    with tab3:
+        st.subheader("📝 여행 전 점검")
+        checklist = st.session_state.checklist_status[country]
+        for item in check_list:
+            checklist[item] = st.checkbox(item, checklist[item], key=f"{country}_{item}")
+        st.session_state.checklist_status[country] = checklist
+
+        completed = sum(checklist.values())
+        total = len(check_list)
+        if completed < total:
+            st.warning(f"⚠️ {completed}/{total} 항목 완료 — 출국 전 점검이 필요합니다!")
+        else:
+            st.success("🎉 모든 점검 완료! 안전한 여행 되세요!")
+
+    with tab4:
+        st.subheader("📊 국가별 안전지수 비교")
+        df = pd.DataFrame(list(safety_index.items()), columns=["국가", "안전지수"])
+        st.bar_chart(df.set_index("국가"))
+
+    # 다시 검색 버튼
+    if st.button("⬅️ 처음으로 돌아가기"):
+        st.session_state.report_searched = False
+        st.rerun()
+
+# --- 8. 여행 이력 표시 ---
+st.markdown("---")
+st.subheader("🧳 나의 여행 기록")
+if len(st.session_state.travel_history) > 0:
+    df = pd.DataFrame(st.session_state.travel_history)
+    st.dataframe(df)
+else:
+    st.info("아직 여행 기록이 없습니다.")

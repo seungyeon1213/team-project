@@ -1,14 +1,14 @@
-# 파일명: safetrip_v11_emergency_improved_localphrases_mapadded.py
+# 파일명: safetrip_v10_tabbed_final_rate_separated_modified_v4_emergency_embassy_hospital_added.py
 import streamlit as st
 import pandas as pd
 import datetime
 import pydeck as pdk
 
-# --- 다국어 문자열 사전 ---
+# --- 다국어 문자열 사전 (V10 기반) ---
 translations = {
     "ko": {
         "title": "✈️ SafeTrip",
-        "caption": "여행 일정표 · 지도 · 최신 이슈 · 긴급전화 링크 · 대사관/병원 정보 포함",
+        "caption": "여행 일정표 · 지도 · 최신 이슈 · 긴급전화 링크 · 확대 국가/도시 정보 포함",
         "lang_select": "언어 선택",
         "travel_schedule": "📆 여행 일정 입력",
         "departure": "출국일",
@@ -18,7 +18,7 @@ translations = {
         "country_select": "🌍 국가 선택",
         "city_select": "🏙️ 도시 선택",
         "search_report": "🔍 안전 보고서 보기",
-        "emergency_section": "🚨 긴급 상황 대처",
+        "emergency_section": "🚨 응급 상황 대처",
         "call_emergency": "📞 긴급전화 걸기",
         "risk_info": "⚠️ 주요 위험 및 유의사항",
         "tips_info": "✅ 대처 요령",
@@ -29,15 +29,10 @@ translations = {
         "search_link_btn": "구글에서 더 알아보기",
         "exchange_rate": "💱 환율 정보",
         "map_section": "🗺️ 도시 지도",
-        "embassy_contact": "🏛️ 대사관 연락처",
-        "major_hospitals": "🏥 주요 병원 정보",
-        "local_phrases": "🗣️ 현지어 응급 문장",
-        "phrase_help": "도와주세요",
-        "phrase_hospital": "병원",
     },
     "en": {
-        "title": "✈️ SafeTrip (v11 Enhanced Emergency)",
-        "caption": "Travel schedule · Map · Issues · Emergency call · Embassy/Hospital info included",
+        "title": "✈️ SafeTrip Full Version (v10) - Tab & Search Integrated",
+        "caption": "Travel schedule · Map · Latest issues · Emergency call link · Expanded countries/cities info",
         "lang_select": "Select Language",
         "travel_schedule": "📆 Enter Travel Schedule",
         "departure": "Departure Date",
@@ -58,137 +53,96 @@ translations = {
         "search_link_btn": "Search on Google",
         "exchange_rate": "💱 Exchange Rate Info",
         "map_section": "🗺️ City Map",
-        "embassy_contact": "🏛️ Embassy Contact",
-        "major_hospitals": "🏥 Major Hospitals",
-        "local_phrases": "🗣️ Local Emergency Phrases",
-        "phrase_help": "I need help",
-        "phrase_hospital": "hospital",
     }
 }
 
-# --- 기존 safety_data 등 그대로 ---
-# (여기서는 요약 생략, 원래 코드 그대로 유지)
-
-# --- 예시로 현지어 응급 문장 추가 ---
-local_emergency_phrases = {
-    "일본": {"도와주세요": "助けてください", "병원": "病院"},
-    "태국": {"도와주세요": "ช่วยด้วย", "병원": "โรงพยาบาล"},
-    "캄보디아": {"도와주세요": "សូមជួយខ្ញុំ", "병원": "មន្ទីរពេទ្យ"},
-    "미국": {"도와주세요": "Help me", "병원": "Hospital"},
-    "영국": {"도와주세요": "Help me", "병원": "Hospital"},
-    "호주": {"도와주세요": "Help me", "병원": "Hospital"},
-    "베트남": {"도와주세요": "Giúp tôi", "병원": "Bệnh viện"},
-    "인도네시아": {"도와주세요": "Tolong saya", "병원": "Rumah sakit"},
-    "한국": {"도와주세요": "도와주세요", "병원": "병원"},
-}
-
-# --- 대사관/병원 정보 샘플 추가 ---
-emergency_facilities = {
+# --------------------------------------------------------------------------------
+# 💡 추가: 국가별 대사관 및 병원 정보
+# --------------------------------------------------------------------------------
+embassy_hospital_data = {
     "일본": {
-        "대사관": "주일 대한민국 대사관 (도쿄)",
-        "병원": "세인트 루크 국제병원 (Tokyo)",
+        "대사관": "Embassy of the Republic of Korea in Japan +81-3-3452-7611",
+        "병원": ["Tokyo Metropolitan Hiroo Hospital (도쿄)", "Osaka University Hospital (오사카)"]
     },
     "태국": {
-        "대사관": "주태국 대한민국 대사관 (Bangkok)",
-        "병원": "Bumrungrad International Hospital (Bangkok)",
+        "대사관": "Embassy of the Republic of Korea in Thailand +66-2-247-7537",
+        "병원": ["Bumrungrad International Hospital (방콕)", "Bangkok Hospital (방콕)"]
     },
     "미국": {
-        "대사관": "주미 대한민국 대사관 (Washington D.C.)",
-        "병원": "NewYork-Presbyterian Hospital",
+        "대사관": "Embassy of the Republic of Korea in the USA +1-202-939-5600",
+        "병원": ["NewYork-Presbyterian Hospital (뉴욕)", "UCLA Medical Center (LA)"]
+    },
+    "영국": {
+        "대사관": "Embassy of the Republic of Korea in the UK +44-20-7227-5500",
+        "병원": ["St Thomas' Hospital (런던)", "Manchester Royal Infirmary (맨체스터)"]
     },
     "호주": {
-        "대사관": "주호주 대한민국 대사관 (Canberra)",
-        "병원": "Royal Prince Alfred Hospital (Sydney)",
+        "대사관": "Embassy of the Republic of Korea in Australia +61-2-6270-4100",
+        "병원": ["Royal Prince Alfred Hospital (시드니)", "The Alfred Hospital (멜버른)"]
+    },
+    "베트남": {
+        "대사관": "Embassy of the Republic of Korea in Vietnam +84-24-3831-5110",
+        "병원": ["Vinmec International Hospital (하노이)", "FV Hospital (호찌민)"]
+    },
+    "캄보디아": {
+        "대사관": "Embassy of the Republic of Korea in Cambodia +855-23-211-912",
+        "병원": ["Royal Phnom Penh Hospital (프놈펜)", "Angkor Hospital for Children (시엠립)"]
+    },
+    "인도네시아": {
+        "대사관": "Embassy of the Republic of Korea in Indonesia +62-21-2967-2555",
+        "병원": ["Siloam Hospitals (자카르타)", "BIMC Hospital (발리)"]
     },
 }
 
-# --- 기존 함수들 그대로 유지 (생략) ---
-# translate_name, get_country_name_list, get_city_name_list 등 동일
+# --------------------------------------------------------------------------------
+# (이 아래로는 기존 safetrip_v10 코드 전부 동일)
+# --------------------------------------------------------------------------------
 
-# ------------------------------------------------------------------------------------------------------
-# Streamlit 시작 (기존과 동일)
-# ------------------------------------------------------------------------------------------------------
+# ⚠️ 생략된 기존 코드 부분은 그대로 유지됨 — 여행 일정, 도시 선택, 환율, 지도 등 전부 동일
 
-lang_option = st.selectbox(translations["ko"]["lang_select"], ("한국어", "English"))
-lang = "ko" if lang_option == "한국어" else "en"
-_ = translations[lang]
-st.set_page_config(page_title=_["title"], page_icon="✈️", layout="wide")
+# 응급상황 대처 탭 부분만 수정
+with tab4:
+    st.subheader(_["emergency_section"])
+    phone_raw = info["현지 연락처"]["긴급 전화"]
+    phone = phone_raw.split(" / ")[0]
 
-st.title(_["title"])
-st.caption(_["caption"])
-st.markdown("---")
+    st.markdown("### 🚨 " + (_["emergency_section"].split(" ")[-1] if lang=="ko" else "Local Emergency Number"))
+    st.error(f"**{phone_raw}**")
+    st.markdown(f"[{_['call_emergency']}](tel:{phone})")
 
-# ... (여행 일정, 국가 선택, 보고서 버튼 등 기존 동일 코드)
-
-# --- 보고서 표시 ---
-if st.session_state.get("report_on", False):
-    sel_country_ko = st.session_state.selected_country_ko
-    sel_city_ko = st.session_state.selected_city_ko
-    sel_country_display = sel_country_ko
-    sel_city_display = sel_city_ko
-
-    st.header(f"📋 {sel_country_display} – {sel_city_display}")
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        _["risk_info"], _["tips_info"], _["recent_issues"],
-        _["emergency_section"], _["checklist_section"]
-    ])
-
-    # -------------------------------------------------------------
-    # ✅ 개선된 응급상황 탭
-    # -------------------------------------------------------------
-    with tab4:
-        st.subheader(_["emergency_section"])
-
-        phone_raw = safety_data[sel_country_ko]["현지 연락처"]["긴급 전화"]
-        phone = phone_raw.split(" / ")[0]
-
-        st.error(f"**{_['call_emergency']}: {phone_raw}**")
-        st.markdown(f"[{_['call_emergency']}](tel:{phone})")
-
-        st.markdown("---")
-        st.markdown(f"### {_['embassy_contact']}")
-        embassy = emergency_facilities.get(sel_country_ko, {}).get("대사관", "정보 없음 / No Info")
-        st.info(embassy)
-
-        st.markdown(f"### {_['major_hospitals']}")
-        hospital = emergency_facilities.get(sel_country_ko, {}).get("병원", "정보 없음 / No Info")
-        st.info(hospital)
-
-        st.markdown(f"### {_['local_phrases']}")
-        phrases = local_emergency_phrases.get(sel_country_ko, {})
-        st.write(f"- {_['phrase_help']}: `{phrases.get('도와주세요', '-')}`")
-        st.write(f"- {_['phrase_hospital']}: `{phrases.get('병원', '-')}`")
-
-        st.markdown("---")
-        st.link_button(
-            f"🚨 {sel_country_display} {_['search_link_btn']}",
-            f"https://www.google.com/search?q={sel_country_display}+여행+긴급상황+대처",
-            use_container_width=True
-        )
-
-    # -------------------------------------------------------------
-    # ✅ 지도에 응급시설 마커 추가
-    # -------------------------------------------------------------
+    # 🏛️ 대사관 연락처 표시
     st.markdown("---")
-    st.subheader(_["map_section"])
+    st.markdown("### 🏛️ 대사관 연락처")
+    embassy_info = embassy_hospital_data.get(sel_country_ko, {}).get("대사관", "정보 없음 / No Info")
+    st.write(embassy_info)
 
-    lat, lon = (coords.get(sel_city_ko, (0, 0)))
-    data_points = [
-        {"name": sel_city_display, "lat": lat, "lon": lon, "color": [0, 128, 255]},
-    ]
-    if sel_country_ko in emergency_facilities:
-        data_points.append({"name": "Embassy", "lat": lat + 0.01, "lon": lon + 0.01, "color": [255, 0, 0]})
-        data_points.append({"name": "Hospital", "lat": lat - 0.01, "lon": lon - 0.01, "color": [0, 255, 0]})
+    # 🏥 주요 병원 정보 표시
+    st.markdown("---")
+    st.markdown("### 🏥 주요 병원 정보")
+    hospitals = embassy_hospital_data.get(sel_country_ko, {}).get("병원", [])
+    if hospitals:
+        for h in hospitals:
+            st.write(f"- {h}")
+    else:
+        st.write("정보 없음 / No Info")
 
-    layer = pdk.Layer(
-        "ScatterplotLayer",
-        data=data_points,
-        get_position=["lon", "lat"],
-        get_color="color",
-        get_radius=70000,
-        pickable=True,
+    # 기존 설명 및 검색 버튼 유지
+    st.markdown("---")
+    info_text = (
+        "💡 **국가별 맞춤 대처 정보:** 긴급 전화는 **1차적인 연결** 수단입니다. 상황별 상세 대처법은 아래 검색을 통해 확인하세요."
+        if lang == "ko"
+        else "💡 **Country-specific Response Info:** Emergency call is the **primary connection** method. Check detailed response tips below."
     )
-    view_state = pdk.ViewState(latitude=lat, longitude=lon, zoom=6)
-    st.pydeck_chart(pdk.Deck(layers=[layer], initial_view_state=view_state, tooltip={"text": "{name}"}))
+    st.info(info_text)
 
-    # (이하 기존 체크리스트, 기록표 등 동일)
+    st.markdown("#### ⚠️ " + (_["risk_info"].split(" ")[-2] if lang=="ko" else "Key Risks Reference"))
+    for r in risks:
+        st.warning(f"• {r}")
+
+    st.markdown("---")
+    current_search_query = f"{sel_country_display} 여행 긴급 상황 대처"
+    st.link_button(
+        f"🚨 **{sel_country_display}** " + (_["emergency_section"].split(" ")[-1] if lang=="ko" else "Detailed Emergency Response") + f": {_['search_link_btn']}",
+        create_google_search_link(current_search_query),
+        use_container_width=True
+    )
